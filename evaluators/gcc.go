@@ -15,6 +15,7 @@ type GccCompiler struct {
 
 	flags   []string
 	sources []string
+	objects []string
 	links   []string
 	args    []string
 
@@ -78,21 +79,40 @@ func (g *GccCompiler) createObjectFiles(source string) {
 	cmd := "gcc -c " + source + " " + strings.Join(g.flags, " ")
 
 	fmt.Println(cmd)
-	exec.Command("bash", "-c", cmd).CombinedOutput()
+	out, err := exec.Command("bash", "-c", cmd).CombinedOutput()
+
+	if err != nil {
+		if g.errorHandler != nil {
+			g.errorHandler.errorOutput += string(out)
+		} else {
+			g.errorHandler = NewErrorHandler(CompileError, &err, string(out))
+		}
+	}
+
 }
 
 func (g *GccCompiler) CompileSources() {
-	//TODO call create object files calls using gorotuines
+	for _, source := range g.sources {
+		g.waitGroup.Add(1)
+		go g.createObjectFiles(source)
+		g.objects = append(g.objects, strings.Replace(source, ".c", ".o", 1))
+	}
+	g.waitGroup.Wait()
+
+
 	cmd := "gcc -o exec " +
-		strings.Join(g.flags, " ") + " " +
-		strings.Join(g.sources, " ") + " " +
+		strings.Join(g.objects, " ") + " " +
 		strings.Join(g.links, " ") + "\n"
 
 	fmt.Println(cmd)
 	out, err := exec.Command("bash", "-c", cmd).CombinedOutput()
 
 	if err != nil {
-		g.errorHandler = NewErrorHandler(CompileError, &err, string(out))
+		if g.errorHandler != nil {
+			g.errorHandler.errorOutput += string(out)
+		} else {
+			g.errorHandler = NewErrorHandler(CompileError, &err, string(out))
+		}
 		return
 	}
 }
