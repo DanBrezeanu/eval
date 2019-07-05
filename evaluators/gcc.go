@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"sync"
 )
 
 type GccCompiler struct {
@@ -20,10 +21,13 @@ type GccCompiler struct {
 	output string
 
 	errorHandler *ErrorHandler
+	waitGroup    *sync.WaitGroup
 }
 
 func NewGccCompiler() *GccCompiler {
 	g := new(GccCompiler)
+	g.waitGroup = &sync.WaitGroup{}
+
 	g.checkPath()
 
 	if g.errorHandler != nil {
@@ -69,7 +73,16 @@ func (g *GccCompiler) AddArgs(args ...string) {
 	g.args = append(g.args, args...)
 }
 
+func (g *GccCompiler) createObjectFiles(source string) {
+	defer g.waitGroup.Done()
+	cmd := "gcc -c " + source + " " + strings.Join(g.flags, " ")
+
+	fmt.Println(cmd)
+	exec.Command("bash", "-c", cmd).CombinedOutput()
+}
+
 func (g *GccCompiler) CompileSources() {
+	//TODO call create object files calls using gorotuines
 	cmd := "gcc -o exec " +
 		strings.Join(g.flags, " ") + " " +
 		strings.Join(g.sources, " ") + " " +
