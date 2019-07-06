@@ -8,7 +8,6 @@ import (
 )
 
 type GccCompiler struct {
-	Compiler
 	exists  bool
 	version string
 	path    string
@@ -26,7 +25,7 @@ type GccCompiler struct {
 }
 
 func NewGccCompiler() *GccCompiler {
-	g := new(GccCompiler)
+	var g GccCompiler = GccCompiler{}
 	g.waitGroup = &sync.WaitGroup{}
 
 	g.checkPath()
@@ -37,7 +36,7 @@ func NewGccCompiler() *GccCompiler {
 	}
 
 	g.checkVersion()
-	return g
+	return &g
 }
 
 func (g *GccCompiler) checkPath() string {
@@ -95,10 +94,12 @@ func (g *GccCompiler) CompileSources() {
 	for _, source := range g.sources {
 		g.waitGroup.Add(1)
 		go g.createObjectFiles(source)
-		g.objects = append(g.objects, strings.Replace(source, ".c", ".o", 1))
+		object := source[:len(source)-1] + "o"
+		g.objects = append(g.objects, object)
 	}
 	g.waitGroup.Wait()
 
+	//TODO: create channel for compiling errors
 
 	cmd := "gcc -o exec " +
 		strings.Join(g.objects, " ") + " " +

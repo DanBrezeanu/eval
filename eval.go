@@ -9,8 +9,7 @@ import (
 )
 
 func main() {
-	var x *evaluators.GccCompiler = evaluators.NewGccCompiler()
-
+	var x evaluators.Compiler = evaluators.NewGccCompiler()
 	gui.MainGui()
 
 	x.AddSources("test.c", "test2.c")

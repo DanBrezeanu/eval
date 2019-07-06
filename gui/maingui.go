@@ -1,10 +1,22 @@
 package gui
 
 import (
+	"fmt"
+
+	"github.com/DanBrezeanu/eval/evaluators"
 	"github.com/andlabs/ui"
 )
 
 var MainWin *ui.Window
+var compiler evaluators.Compiler
+
+func createCompiler(filename string) {
+	compiler = evaluators.NewGccCompiler()
+
+	compiler.AddSources(filename)
+	compiler.CompileSources()
+	fmt.Println(compiler.RunExec())
+}
 
 func makeEvalTab() ui.Control {
 	vbox := ui.NewVerticalBox()
@@ -13,20 +25,25 @@ func makeEvalTab() ui.Control {
 	grid.SetPadded(true)
 
 	button := ui.NewButton("Open File")
-	entry := ui.NewEntry()
+	sourceEntry := ui.NewEntry()
+	// flagsEntry := ui.NewEntry()
+	// linksEntry := ui.NewEntry()
 
 	button.OnClicked(func(*ui.Button) {
 		filename := ui.OpenFile(MainWin)
 		if filename == "" {
 			filename = "(cancelled)"
 		}
-		entry.SetText(filename)
+		sourceEntry.SetText(filename)
+		if filename != "(cancelled)" {
+			createCompiler(filename)
+		}
 	})
 
 	grid.Append(button,
 		0, 0, 1, 1,
 		false, ui.AlignFill, false, ui.AlignFill)
-	grid.Append(entry,
+	grid.Append(sourceEntry,
 		1, 0, 1, 1,
 		true, ui.AlignFill, false, ui.AlignFill)
 	vbox.Append(grid, false)
