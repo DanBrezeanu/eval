@@ -8,6 +8,7 @@ import (
 )
 
 type GccCompiler struct {
+	name    string
 	exists  bool
 	version string
 	path    string
@@ -32,10 +33,10 @@ func NewGccCompiler() *GccCompiler {
 
 	if g.errorHandler != nil {
 		g.errorHandler.WriteToStderr()
-		return nil
 	}
 
 	g.checkVersion()
+	g.name = "gcc"
 	return &g
 }
 
@@ -91,6 +92,8 @@ func (g *GccCompiler) createObjectFiles(source string) {
 }
 
 func (g *GccCompiler) CompileSources() {
+	g.objects = nil
+
 	for _, source := range g.sources {
 		g.waitGroup.Add(1)
 		go g.createObjectFiles(source)
@@ -119,8 +122,9 @@ func (g *GccCompiler) CompileSources() {
 }
 
 func (g *GccCompiler) RunExec() string {
-	cmd := "./exec " + strings.Join(g.args, " ")
+	cmd := "{ ./exec " + strings.Join(g.args, " ") + " ;}"
 	out, err := exec.Command("bash", "-c", cmd).CombinedOutput()
+	fmt.Println(cmd)
 
 	if err != nil {
 		g.errorHandler = NewErrorHandler(RunTimeError, &err, string(out))
@@ -136,6 +140,14 @@ func (g *GccCompiler) RaisedError() bool {
 
 func (g *GccCompiler) GetErrorHandler() *ErrorHandler {
 	return g.errorHandler
+}
+
+func (g *GccCompiler) EraseErrorHandler() {
+	g.errorHandler = nil
+}
+
+func (g *GccCompiler) GetName() string {
+	return g.name
 }
 
 func (g GccCompiler) String() string {

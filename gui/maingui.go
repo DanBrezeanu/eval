@@ -20,13 +20,40 @@ func createCompiler(filename string) {
 }
 
 func evaluateSources(flags, links, args string) bool {
+	defer compiler.EraseErrorHandler()
+
 	compiler.AddLinks(strings.Split(links, " ")...)
 	compiler.AddFlags(strings.Split(flags, " ")...)
 	compiler.AddArgs(strings.Split(args, " ")...)
 
 	compiler.CompileSources()
-	fmt.Println(compiler.RunExec())
 
+	if compiler.RaisedError() {
+		switch compiler.GetErrorHandler().WhatType() {
+		case evaluators.NoCompilerFound:
+			ui.MsgBoxError(MainWin,
+				compiler.GetErrorHandler().What(),
+				compiler.GetName()+" could not be found. Try installing it or adding it in PATH.")
+			return false
+
+		case evaluators.CompileError:
+			ui.MsgBoxError(MainWin,
+				compiler.GetErrorHandler().What(),
+				compiler.GetErrorHandler().Error())
+			return false
+		}
+	} else {
+		fmt.Println(compiler.RunExec())
+		if compiler.RaisedError() {
+			switch compiler.GetErrorHandler().WhatType() {
+			case evaluators.RunTimeError:
+				ui.MsgBoxError(MainWin,
+					compiler.GetErrorHandler().What(),
+					compiler.GetErrorHandler().Error())
+				return false
+			}
+		}
+	}
 	return true
 }
 
@@ -53,12 +80,23 @@ func makeEvalTab() ui.Control {
 	vbox.Append(form, false)
 	form.SetPadded(true)
 
+	flagsVerticalBox := ui.NewHorizontalBox()
+	flagsVerticalBox.SetPadded(true)
+
 	flagsEntry := ui.NewEntry()
+	flagsVerticalBox.Append(flagsEntry, true)
+
+	flagsEntry.OnChanged(func(*ui.Entry) {
+		if flagsEntry.Text()[len(flagsEntry.Text())-1] == ' ' {
+			flagsVerticalBox.Append(ui.NewButton(flagsEntry.Text()), false)
+		}
+	})
+
 	linksEntry := ui.NewEntry()
 	argsEntry := ui.NewEntry()
 	multiSourceEntry := ui.NewNonWrappingMultilineEntry()
 
-	form.Append("Flags", flagsEntry, false)
+	form.Append("Flags", flagsVerticalBox, false)
 	form.Append("Links", linksEntry, false)
 	form.Append("Args", argsEntry, false)
 
@@ -85,17 +123,30 @@ func makeEvalTab() ui.Control {
 	cbox := ui.NewCombobox()
 	cbox.Append("gcc")
 	cbox.Append("java")
+	cbox.Append("python3")
 	cbox.SetSelected(0)
 	vbox.Append(cbox, false)
 
 	compileButton := ui.NewButton("Evaluate")
+
+	for i := 0; i < 6; i++ {
+		vbox.Append(ui.NewLabel(""), false)
+	}
+	vbox.Append(compileButton, false)
+
+	ip := ui.NewProgressBar()
+	ip.SetValue(-1)
+	ip.Hide()
+	vbox.Append(ip, false)
+
 	compileButton.OnClicked(func(*ui.Button) {
+		ip.Show()
+		defer ip.Hide()
 		evaluateSources(flagsEntry.Text(), linksEntry.Text(), argsEntry.Text())
+		// errors
+
 	})
 
-	vbox.Append(ui.NewLabel(""), false)
-	vbox.Append(ui.NewLabel(""), false)
-	vbox.Append(compileButton, false)
 	return vbox
 }
 

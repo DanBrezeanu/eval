@@ -5,9 +5,13 @@ type Compiler interface {
 	checkVersion() string
 
 	CompileSources()
+	RunExec() string
+
 	RaisedError() bool
 	GetErrorHandler() *ErrorHandler
-	RunExec() string
+	EraseErrorHandler()
+
+	GetName() string
 
 	AddFlags(flags ...string)
 	AddLinks(links ...string)
