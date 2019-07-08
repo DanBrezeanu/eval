@@ -12,5 +12,6 @@ type Compiler interface {
 	AddFlags(flags ...string)
 	AddLinks(links ...string)
 	AddSources(sources ...string)
+	AddArgs(args ...string)
 	String() string
 }
