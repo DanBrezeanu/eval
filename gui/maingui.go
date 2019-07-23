@@ -2,6 +2,7 @@ package gui
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/DanBrezeanu/eval/evaluators"
@@ -10,6 +11,22 @@ import (
 
 var MainWin *ui.Window
 var compiler evaluators.Compiler
+
+func makeOnChangedForEntries(entry *ui.Entry, parent *ui.Box) {
+	if len(entry.Text()) > 0 && len(strings.TrimSpace(entry.Text())) > 0 {
+		if entry.Text()[len(entry.Text())-1] == ' ' {
+			parent.Append(func() *ui.Button {
+				button := ui.NewButton(strings.TrimSpace(entry.Text()))
+				button.OnClicked(func(*ui.Button) {
+					button.Hide()
+				})
+
+				return button
+			}(), false)
+			entry.SetText("")
+		}
+	}
+}
 
 func createCompiler(filename string) {
 	//TODO switch compiler
@@ -80,25 +97,41 @@ func makeEvalTab() ui.Control {
 	vbox.Append(form, false)
 	form.SetPadded(true)
 
-	flagsVerticalBox := ui.NewHorizontalBox()
-	flagsVerticalBox.SetPadded(true)
+	flagsHorizontalBox := ui.NewHorizontalBox()
+	flagsHorizontalBox.SetPadded(true)
+
+	linksHorizontalBox := ui.NewHorizontalBox()
+	linksHorizontalBox.SetPadded(true)
+
+	argsHorizontalBox := ui.NewHorizontalBox()
+	argsHorizontalBox.SetPadded(true)
 
 	flagsEntry := ui.NewEntry()
-	flagsVerticalBox.Append(flagsEntry, true)
+	flagsHorizontalBox.Append(flagsEntry, true)
 
 	flagsEntry.OnChanged(func(*ui.Entry) {
-		if flagsEntry.Text()[len(flagsEntry.Text())-1] == ' ' {
-			flagsVerticalBox.Append(ui.NewButton(flagsEntry.Text()), false)
-		}
+		makeOnChangedForEntries(flagsEntry, flagsHorizontalBox)
 	})
 
 	linksEntry := ui.NewEntry()
+	linksHorizontalBox.Append(linksEntry, true)
+
+	linksEntry.OnChanged(func(*ui.Entry) {
+		makeOnChangedForEntries(linksEntry, linksHorizontalBox)
+	})
+
 	argsEntry := ui.NewEntry()
+	argsHorizontalBox.Append(argsEntry, true)
+
+	argsEntry.OnChanged(func(*ui.Entry) {
+		makeOnChangedForEntries(argsEntry, argsHorizontalBox)
+	})
+
 	multiSourceEntry := ui.NewNonWrappingMultilineEntry()
 
-	form.Append("Flags", flagsVerticalBox, false)
-	form.Append("Links", linksEntry, false)
-	form.Append("Args", argsEntry, false)
+	form.Append("Flags", flagsHorizontalBox, false)
+	form.Append("Links", linksHorizontalBox, false)
+	form.Append("Args", argsHorizontalBox, false)
 
 	button.OnClicked(func(*ui.Button) {
 		filename := ui.OpenFile(MainWin)
@@ -113,6 +146,7 @@ func makeEvalTab() ui.Control {
 					grid.Append(multiSourceEntry,
 						1, 0, 1, 1,
 						true, ui.AlignFill, true, ui.AlignFill)
+					sourceEntry.Hide()
 				} else { /* multiple sources */
 					multiSourceEntry.SetText(multiSourceEntry.Text() + "\n" + filename)
 				}
@@ -139,9 +173,14 @@ func makeEvalTab() ui.Control {
 	ip.Hide()
 	vbox.Append(ip, false)
 
+	F := ui.NewVerticalBox()
 	compileButton.OnClicked(func(*ui.Button) {
 		ip.Show()
 		defer ip.Hide()
+
+		for idxC, C := range F.GetChildren( {
+			fmt.Println(reflect.TypeOf(C))
+		}
 		evaluateSources(flagsEntry.Text(), linksEntry.Text(), argsEntry.Text())
 		// errors
 
